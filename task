@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>塾の改善改革</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; background: #F1F5F9; min-height: 100vh; }
+button { cursor: pointer; border: none; background: none; font-family: inherit; }
+.page { display: none; padding: 10px 8px 28px; }
+.page.active { display: block; }
+.member-card { cursor: pointer; transition: transform 0.12s; }
+.member-card:active { transform: scale(0.98); }
+.status-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1.5px solid; }
+.dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+#sync-indicator { position: fixed; top: 8px; right: 8px; z-index: 99998; display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; border: 1px solid; }
+#sync-indicator.synced { background: #ECFDF5; color: #065F46; border-color: #A7F3D0; }
+#sync-indicator.syncing { background: #EEF2FF; color: #4338CA; border-color: #C7D2FE; }
+#sync-indicator.offline { background: #F8FAFC; color: #64748B; border-color: #E2E8F0; }
+#config-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99999; align-items:center; justify-content:center; padding:20px; }
+#config-modal.open { display:flex; }
+.config-box { background:#fff; border-radius:16px; padding:24px 20px; width:100%; max-width:400px; }
+textarea, input, select { width: 100%; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; }
+</style>
+</head>
+<body>
+<div id="sync-indicator" class="offline"><span class="dot" style="background:#94A3B8"></span><span id="sync-text">未設定 ⚙️</span></div>
+<div id="config-modal"><div class="config-box"><div style="font-weight:700;margin-bottom:10px;">🔥 Firebase 設定</div><input type="text" id="cfg-apikey" placeholder="API Key" style="margin-bottom:8px;"><input type="text" id="cfg-dburl" placeholder="Database URL" style="margin-bottom:8px;"><input type="text" id="cfg-projectid" placeholder="Project ID" style="margin-bottom:8px;"><input type="text" id="cfg-appid" placeholder="App ID" style="margin-bottom:12px;"><button onclick="saveConfig()" style="width:100%;padding:12px;background:#1E293B;color:#fff;border-radius:12px;font-weight:700;">保存して接続</button></div></div>
+<div id="page-home" class="page active">
+  <div style="display:flex;align-items:center;margin-bottom:10px;font-weight:700;">📋 塾の改善改革<button onclick="openHomeAdd()" style="margin-left:auto;background:#1E293B;color:#fff;padding:5px 12px;border-radius:20px;font-size:11px;">＋ タスク追加</button><button onclick="openConfigModal()" style="margin-left:5px;background:#EEF2FF;color:#4338CA;padding:5px 10px;border-radius:20px;font-size:11px;">⚙️</button></div>
+  <div id="home-active-list" style="background:#fff;border-radius:12px;border:1px solid #E2E8F0;padding:8px;display:flex;flex-direction:column;gap:5px;"></div>
+  <div id="member-list" style="margin-top:15px;display:flex;flex-direction:column;gap:8px;"></div>
+</div>
+<div id="page-member" class="page">
+  <button onclick="goHome()" style="background:#E2E8F0;padding:5px 15px;border-radius:20px;margin-bottom:10px;">← 戻る</button>
+  <h2 id="m-name" style="margin-bottom:15px;"></h2>
+  <div id="task-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getDatabase, ref, set, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+
+let db, tasks = {}, currentMember = null;
+const CONFIG_KEY = 'juku-firebase-config';
+
+window.openConfigModal = () => document.getElementById('config-modal').classList.add('open');
+window.saveConfig = () => {
+  const cfg = { apiKey: document.getElementById('cfg-apikey').value, databaseURL: document.getElementById('cfg-dburl').value, projectId: document.getElementById('cfg-projectid').value, appId: document.getElementById('cfg-appid').value };
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+  location.reload();
+};
+
+const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+if (cfg.apiKey) {
+  const app = initializeApp(cfg);
+  db = getDatabase(app);
+  onValue(ref(db, 'juku-tasks'), (snap) => {
+    tasks = snap.val()?.tasks || {};
+    document.getElementById('sync-indicator').className = 'synced';
+    document.getElementById('sync-text').textContent = '同期済み ✓';
+    render();
+  });
+}
+
+function render() {
+  const homeList = document.getElementById('home-active-list');
+  homeList.innerHTML = '';
+  Object.keys(tasks).forEach(m => {
+    tasks[m].forEach(t => {
+      if (t.status !== '完了') {
+        const div = document.createElement('div');
+        div.style.padding = '5px'; div.style.borderBottom = '1px solid #eee';
+        div.textContent = `[<LaTex>${m}] $</LaTex>{t.text} (${t.status})`;
+        homeList.appendChild(div);
+      }
+    });
+  });
+
+  const mList = document.getElementById('member-list');
+  mList.innerHTML = '';
+  Object.keys(tasks).forEach(m => {
+    const btn = document.createElement('button');
+    btn.style.background = '#fff'; btn.style.padding = '15px'; btn.style.borderRadius = '12px'; btn.style.textAlign = 'left';
+    btn.textContent = m;
+    btn.onclick = () => openMember(m);
+    mList.appendChild(btn);
+  });
+}
+
+function openMember(m) {
+  currentMember = m;
+  document.getElementById('page-home').classList.remove('active');
+  document.getElementById('page-member').classList.add('active');
+  document.getElementById('m-name').textContent = m;
+  const tList = document.getElementById('task-list');
+  tList.innerHTML = '';
+  (tasks[m] || []).forEach(t => {
+    const d = document.createElement('div');
+    d.style.background = '#fff'; d.style.padding = '10px'; d.style.borderRadius = '8px';
+    d.textContent = t.text + ' - ' + t.status;
+    tList.appendChild(d);
+  });
+}
+window.goHome = () => {
+  document.getElementById('page-member').classList.remove('active');
+  document.getElementById('page-home').classList.add('active');
+};
+</script>
+</body>
+</html>
