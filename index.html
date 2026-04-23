@@ -2,28 +2,934 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>データ確認</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>塾の改善改革</title>
 <style>
-body { font-family: sans-serif; padding: 20px; background: #f1f5f9; }
-.box { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid #e2e8f0; word-break: break-all; font-size: 12px; }
-h2 { margin-bottom: 16px; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; background: #F1F5F9; min-height: 100vh; }
+button { cursor: pointer; border: none; background: none; font-family: inherit; }
+.page { display: none; padding: 10px 8px 28px; }
+.page.active { display: block; }
+.member-card { cursor: pointer; transition: transform 0.12s; -webkit-transition: transform 0.12s; }
+.member-card:active { transform: scale(0.98); }
+.task-row { cursor: pointer; }
+.pill { display: inline-flex; align-items: center; padding: 1px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+.status-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; border: 1.5px solid; font-family: inherit; }
+.dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 24px; }
+.modal-box { background: #fff; border-radius: 16px; padding: 22px 20px; width: 100%; max-width: 320px; box-shadow: 0 16px 48px rgba(0,0,0,0.2); }
+textarea { width: 100%; border: 1.5px solid #FECACA; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #334155; resize: vertical; background: #fff; line-height: 1.7; font-family: inherit; }
+select, input[type=date] { border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 7px 10px; font-size: 13px; color: #374151; background: #fff; font-family: inherit; }
+/* 同期インジケーター */
+#sync-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 9000; padding: 6px 16px; font-size: 11px; font-weight: 700; text-align: center; display: none; }
+#sync-bar.syncing { display: block; background: #EEF2FF; color: #4338CA; border-top: 1px solid #C7D2FE; }
+#sync-bar.synced  { display: block; background: #ECFDF5; color: #065F46; border-top: 1px solid #A7F3D0; }
+#sync-bar.error   { display: block; background: #FEF2F2; color: #B91C1C; border-top: 1px solid #FECACA; }
 </style>
 </head>
 <body>
-<h2>🔍 ローカルデータ確認</h2>
-<div id="output"></div>
+
+<!-- LINE browser detection -->
+<div id="line-warning" style="display:none;position:fixed;inset:0;background:#1E293B;z-index:99999;padding:40px 24px;text-align:center;font-family:sans-serif;">
+  <div style="font-size:48px;margin-bottom:20px;">🌐</div>
+  <div style="font-size:17px;font-weight:700;color:#fff;margin-bottom:10px;">Safariで開いてください</div>
+  <div style="font-size:13px;color:#94A3B8;margin-bottom:32px;line-height:1.7;">LINEのブラウザではデータが消えることがあります。<br>右下の「…」→「ブラウザで開く」を<br>タップしてください。</div>
+  <div style="background:#334155;border-radius:12px;padding:16px;margin-bottom:24px;">
+    <div style="font-size:11px;color:#94A3B8;margin-bottom:8px;">手順</div>
+    <div style="font-size:13px;color:#fff;line-height:2;">① 右上の <strong>「…」</strong> をタップ<br>② <strong>「ブラウザで開く」</strong> を選択</div>
+  </div>
+  <button onclick="document.getElementById('line-warning').style.display='none'" style="padding:12px 28px;background:#475569;color:#fff;border:none;border-radius:12px;font-size:13px;font-family:sans-serif;">このまま続ける（非推奨）</button>
+</div>
+
+<!-- HOME PAGE -->
+<div id="page-home" class="page active" style="padding:10px 8px 80px;">
+  <div style="font-size:13px;font-weight:700;color:#0F172A;margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+    📋 塾の改善改革
+    <button onclick="openHomeAdd()" style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;background:#1E293B;color:#fff;font-size:11px;font-weight:700;font-family:inherit;">＋ タスク追加</button>
+    <button onclick="confirmReset()" style="display:inline-flex;align-items:center;padding:5px 10px;border-radius:20px;background:#FEE2E2;color:#EF4444;font-size:11px;font-weight:700;font-family:inherit;">🗑 リセット</button>
+    <button onclick="openSettings()" style="display:inline-flex;align-items:center;padding:5px 10px;border-radius:20px;background:#EEF2FF;color:#4338CA;font-size:11px;font-weight:700;font-family:inherit;">⚙️</button>
+  </div>
+
+  <div style="background:#fff;border-radius:12px;border:1px solid #E2E8F0;margin-bottom:12px;overflow:hidden;">
+    <div style="padding:7px 12px;background:#1E293B;display:flex;align-items:center;gap:6px;">
+      <span style="font-size:11px;font-weight:700;color:#fff;">🔥 未完了タスク</span>
+      <span style="font-size:9px;color:#94A3B8;">全チューター</span>
+      <span id="home-active-count" style="margin-left:auto;font-size:10px;font-weight:700;color:#94A3B8;background:#334155;border-radius:20px;padding:1px 7px;"></span>
+    </div>
+    <div id="home-active-list" style="padding:6px 8px;display:flex;flex-direction:column;gap:3px;"></div>
+  </div>
+
+  <div id="home-legend" style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;"></div>
+
+  <div style="font-size:9px;font-weight:700;color:#94A3B8;margin-bottom:6px;letter-spacing:0.1em;">MEMBERS</div>
+  <div id="member-list" style="display:flex;flex-direction:column;gap:5px;"></div>
+</div>
+
+<!-- MEMBER PAGE -->
+<div id="page-member" class="page" style="padding:14px 12px 80px;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+    <button onclick="goHome()" style="width:34px;height:34px;border-radius:50%;background:#E2E8F0;color:#475569;display:flex;align-items:center;justify-content:center;font-size:18px;">‹</button>
+    <div id="m-avatar" style="width:38px;height:38px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0;"></div>
+    <span id="m-name" style="font-weight:700;font-size:17px;color:#0F172A;"></span>
+    <button onclick="toggleAddForm()" id="add-btn" style="margin-left:auto;width:32px;height:32px;border-radius:50%;color:#fff;font-size:22px;display:flex;align-items:center;justify-content:center;">＋</button>
+  </div>
+
+  <div id="add-form" style="display:none;padding:14px;background:#fff;border-radius:12px;border:1px solid #E2E8F0;margin-bottom:14px;">
+    <textarea id="new-task-text" placeholder="タスクを入力…" rows="2" style="border-color:#CBD5E1;"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;">
+      <select id="new-task-status">
+        <option>予定</option><option selected>進行中</option><option>確認中</option><option>完了</option>
+      </select>
+      <input type="date" id="new-task-deadline">
+      <button onclick="addTask()" id="add-confirm-btn" style="color:#fff;border-radius:8px;padding:7px 18px;font-size:13px;font-weight:600;">追加</button>
+      <button onclick="toggleAddForm()" style="color:#94A3B8;font-size:13px;">キャンセル</button>
+    </div>
+  </div>
+
+  <div id="m-status-bar" style="display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;"></div>
+  <div id="task-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+</div>
+
+<!-- STATUS PICKER SHEET -->
+<div id="status-sheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:flex-end;justify-content:center;" onclick="closeSheet()">
+  <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:16px 16px 32px;" onclick="event.stopPropagation()">
+    <div style="width:36px;height:4px;background:#E2E8F0;border-radius:2px;margin:0 auto 14px;"></div>
+    <div id="sheet-task-text" style="font-size:12px;color:#64748B;margin-bottom:12px;line-height:1.5;padding:0 2px;"></div>
+    <div id="sheet-status-btns" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <button onclick="closeSheet()" style="margin-top:12px;width:100%;padding:12px;border:1.5px solid #E2E8F0;border-radius:12px;font-size:13px;font-weight:600;color:#94A3B8;font-family:inherit;background:#F8FAFC;">キャンセル</button>
+  </div>
+</div>
+
+<!-- HOME ADD MODAL -->
+<div id="home-add-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:flex-end;justify-content:center;" onclick="closeHomeAdd()">
+  <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:16px 16px 32px;" onclick="event.stopPropagation()">
+    <div style="width:36px;height:4px;background:#E2E8F0;border-radius:2px;margin:0 auto 14px;"></div>
+    <div style="font-size:13px;font-weight:700;color:#0F172A;margin-bottom:12px;">➕ タスク追加</div>
+    <textarea id="home-add-text" placeholder="タスクを入力…" rows="2" style="border-color:#CBD5E1;margin-bottom:10px;"></textarea>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center;">
+      <select id="home-add-member" style="flex:1;min-width:120px;border:1.5px solid #CBD5E1;border-radius:8px;padding:7px 10px;font-size:13px;color:#374151;background:#fff;font-family:inherit;"></select>
+      <select id="home-add-status" style="flex:1;min-width:100px;border:1.5px solid #CBD5E1;border-radius:8px;padding:7px 10px;font-size:13px;color:#374151;background:#fff;font-family:inherit;">
+        <option>予定</option><option selected>進行中</option><option>確認中</option><option>完了</option>
+      </select>
+    </div>
+    <div style="margin-bottom:10px;">
+      <input type="date" id="home-add-deadline" style="width:100%;border:1.5px solid #CBD5E1;border-radius:8px;padding:7px 10px;font-size:13px;color:#374151;background:#fff;font-family:inherit;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <button onclick="toggleNewMemberForm()" style="display:flex;align-items:center;gap:5px;color:#6366F1;font-size:12px;font-weight:600;font-family:inherit;padding:4px 0;">
+        <span id="new-member-toggle-icon">＋</span> 新しいメンバーを追加
+      </button>
+    </div>
+    <div id="new-member-form" style="display:none;background:#F8FAFC;border:1.5px solid #C7D2FE;border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:700;color:#4338CA;margin-bottom:7px;">👤 新メンバー</div>
+      <input type="text" id="new-member-name" placeholder="名前を入力（例：篠原）" style="width:100%;border:1.5px solid #CBD5E1;border-radius:8px;padding:7px 10px;font-size:13px;color:#374151;background:#fff;font-family:inherit;box-sizing:border-box;margin-bottom:7px;">
+      <button onclick="addNewMember()" style="width:100%;padding:8px;background:#6366F1;color:#fff;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;">追加して選択</button>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="closeHomeAdd()" style="flex:1;padding:12px;border:1.5px solid #E2E8F0;border-radius:12px;font-size:13px;font-weight:600;color:#94A3B8;font-family:inherit;background:#F8FAFC;">キャンセル</button>
+      <button onclick="submitHomeAdd()" style="flex:1;padding:12px;border:none;border-radius:12px;font-size:13px;font-weight:700;color:#fff;font-family:inherit;background:#1E293B;">追加する</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div id="settings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center;padding:20px;" onclick="closeSettings()">
+  <div style="background:#fff;border-radius:16px;padding:22px 20px;width:100%;max-width:360px;box-shadow:0 16px 48px rgba(0,0,0,0.2);" onclick="event.stopPropagation()">
+    <div style="font-weight:700;font-size:14px;color:#0F172A;margin-bottom:4px;">☁️ クラウド同期設定</div>
+    <div style="font-size:11px;color:#64748B;margin-bottom:16px;line-height:1.6;">JSONBinのAPIキーを入力すると、<br>全員でデータを共有できます。</div>
+
+    <div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;">X-Master-Key</div>
+    <input type="password" id="cfg-master-key" placeholder="$2a$10$..." style="width:100%;border:1.5px solid #CBD5E1;border-radius:8px;padding:8px 10px;font-size:12px;color:#334155;background:#fff;font-family:monospace;box-sizing:border-box;margin-bottom:12px;">
+
+    <div style="font-size:11px;font-weight:700;color:#475569;margin-bottom:5px;">Bin ID <span style="font-weight:400;color:#94A3B8;">（自動生成されます）</span></div>
+    <input type="text" id="cfg-bin-id" placeholder="初回接続時に自動作成" style="width:100%;border:1.5px solid #CBD5E1;border-radius:8px;padding:8px 10px;font-size:12px;color:#334155;background:#F8FAFC;font-family:monospace;box-sizing:border-box;margin-bottom:16px;" readonly>
+
+    <div id="settings-status" style="font-size:11px;margin-bottom:12px;min-height:16px;"></div>
+
+    <div style="display:flex;gap:8px;">
+      <button onclick="closeSettings()" style="flex:1;padding:11px;border:1.5px solid #E2E8F0;border-radius:12px;font-size:13px;font-weight:600;color:#94A3B8;font-family:inherit;background:#F8FAFC;">閉じる</button>
+      <button onclick="saveSettings()" style="flex:1;padding:11px;border:none;border-radius:12px;font-size:13px;font-weight:700;color:#fff;font-family:inherit;background:#1E293B;">保存して接続</button>
+    </div>
+    <button onclick="disconnectSync()" style="margin-top:10px;width:100%;padding:9px;border:1.5px solid #FECACA;border-radius:10px;font-size:12px;font-weight:600;color:#EF4444;font-family:inherit;background:#FFF0F0;">同期を解除する</button>
+  </div>
+</div>
+
+<!-- 同期インジケーター -->
+<div id="sync-bar"></div>
+
 <script>
-const out = document.getElementById('output');
-if (localStorage.length === 0) {
-  out.innerHTML = '<div class="box">データが見つかりませんでした</div>';
-} else {
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    const val = localStorage.getItem(key);
-    out.innerHTML += `<div class="box"><b>${key}</b><br><br>${val}</div>`;
+// ---- 定数 ----
+const STORAGE_KEY   = 'juku-tasks-v3';
+const JSONBIN_CFG_KEY = 'juku-jsonbin-cfg';
+const STATUS_LIST   = ['予定','進行中','確認中','完了'];
+const STATUS = {
+  '予定':   { dot:'#F59E0B', bg:'#FFFBEB', text:'#B45309', border:'#FDE68A' },
+  '進行中': { dot:'#6366F1', bg:'#EEF2FF', text:'#4338CA', border:'#C7D2FE' },
+  '確認中': { dot:'#0EA5E9', bg:'#F0F9FF', text:'#0369A1', border:'#BAE6FD' },
+  '完了':   { dot:'#10B981', bg:'#ECFDF5', text:'#065F46', border:'#A7F3D0' },
+};
+const MEMBER_COLOR = {
+  '椿':   { accent:'#6366F1' },
+  '法花': { accent:'#EC4899' },
+  '勝部': { accent:'#F472B6' },
+  '中嶋': { accent:'#F59E0B' },
+  '福田': { accent:'#10B981' },
+  '松橋': { accent:'#3B82F6' },
+  '彦坂': { accent:'#8B5CF6' },
+  '後藤': { accent:'#14B8A6' },
+  '大川': { accent:'#F97316' },
+  '若狭': { accent:'#06B6D4' },
+  '桜井': { accent:'#84CC16' },
+  '池田': { accent:'#EF4444' },
+  '篠原': { accent:'#0EA5E9' },
+};
+const DEFAULT_DATA = {
+  '椿': [
+    { id:1,  text:'シフト作成', status:'進行中', issue:'', deadline:'' },
+    { id:17, text:'椿 / 松橋 千本ノック', status:'進行中', issue:'生徒からの内容が網羅されていない。\n篠田先生分は済みだが、それ以外の面談生徒はまだおぼろげなものとか。', deadline:'' },
+    { id:18, text:'新人教育', status:'進行中', issue:'結論がないとおもうので予算案ベースにポイントセットのが良いと面談した。\n→ 準備できたら松渕さんに提案し初回と面談後の違いなどに私との面談時間を設けてもらうなどを検討。', deadline:'' },
+    { id:19, text:'施策ごとのPDCAシステムを考える', status:'進行中', issue:'', deadline:'' },
+    { id:20, text:'オカケン計画', status:'進行中', issue:'', deadline:'' },
+    { id:21, text:'英検ドキュメント作成', status:'進行中', issue:'', deadline:'' },
+    { id:22, text:'担当非固定制の表作成（チューター縦軸ver）', status:'進行中', issue:'', deadline:'' },
+    { id:23, text:'各科目ノウハウ作成', status:'進行中', issue:'', deadline:'' },
+    { id:3,  text:'日本史チューターからのノウハウ共有', status:'完了', archived:false, issue:'現在、講師チェック中', deadline:'' },
+  ],
+  '法花': [
+    { id:4, text:'配布用「生徒向け自己紹介」作成', status:'進行中', issue:'草案完了済み', deadline:'' },
+    { id:5, text:'データベースの作成（みんなのノウハウ蓄積用）', status:'完了', archived:true, issue:'', deadline:'' },
+  ],
+  '勝部': [],
+  '彦坂': [],
+  '後藤': [],
+  '大川': [],
+  '若狭': [],
+  '桜井': [],
+  '池田': [],
+  '中嶋': [
+    { id:6, text:'世界史チューターからのノウハウ共有', status:'進行中', issue:'', deadline:'' },
+    { id:7, text:'数値分析（通塾タイミング、塾の滞在率など）', status:'進行中', issue:'学習 / ポイントセットの2軸で整理したいが、学習面の指標が未決定。\nポイントセット面：平均通塾時間を中嶋に提案済み。\n\n▼ 担当決定前\n→ 全体数値 ：1年間通してるが生徒でチェック\n\n▼ 担当決定後\n→ 各チューターでチェックできるシステムを構築\n→ どの指標を見るか？のルール定めが必要', deadline:'' },
+    { id:8, text:'世界史チューターからのノウハウ共有', status:'完了', archived:true, issue:'', deadline:'' },
+    { id:9, text:'思考チェック問題集作成', status:'完了', archived:false, issue:'使い方・方法の詳細が未定。システム化が必要。', deadline:'' },
+  ],
+  '福田': [
+    { id:10, text:'来月分の「チューターだより / スマホ使用について」配布', status:'予定', issue:'', deadline:'' },
+  ],
+  '松橋': [
+    { id:11, text:'英単語暗記の仕方まとめ（スライド）', status:'進行中', issue:'', deadline:'' },
+    { id:12, text:'思考回路の分析（2人で過去問 → 知識 or 構造理解の定義を揃える）', status:'進行中', issue:'', deadline:'' },
+    { id:13, text:'音声アプリ修正（音声認識エラー）', status:'進行中', issue:'', deadline:'' },
+    { id:14, text:'来月分のチューターだよりを作成', status:'完了', archived:true, issue:'', deadline:'' },
+    { id:15, text:'早急日本史問題集（上級狙い）', status:'完了', archived:false, issue:'使い方・方法の詳細が未定。システム化が必要。', deadline:'' },
+    { id:16, text:'bブロック未実施面談生徒への対応', status:'完了', archived:false, issue:'4/15水 メッセージ送信 → 4/17遠面談予定', deadline:'' },
+  ],
+  '篠原': [],
+};
+
+const RANDOM_COLORS = [
+  '#8B5CF6','#F43F5E','#14B8A6','#F97316','#06B6D4',
+  '#84CC16','#A855F7','#EF4444','#0EA5E9','#D946EF',
+];
+
+// ---- 状態 ----
+let tasks = {};
+let nextId = 100;
+let currentMember = null;
+let openIssueId = null;
+let openDeadlineId = null;
+let showArchived = false;
+
+// ---- JSONBin 設定 ----
+function getJBConfig() {
+  try { return JSON.parse(localStorage.getItem(JSONBIN_CFG_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+function setJBConfig(cfg) {
+  localStorage.setItem(JSONBIN_CFG_KEY, JSON.stringify(cfg));
+}
+
+function openSettings() {
+  const cfg = getJBConfig();
+  document.getElementById('cfg-master-key').value = cfg.masterKey || '';
+  document.getElementById('cfg-bin-id').value = cfg.binId || '';
+  document.getElementById('settings-status').textContent = cfg.binId ? '✅ 同期設定済み' : '';
+  document.getElementById('settings-status').style.color = '#065F46';
+  document.getElementById('settings-modal').style.display = 'flex';
+}
+function closeSettings() {
+  document.getElementById('settings-modal').style.display = 'none';
+}
+async function saveSettings() {
+  const key = document.getElementById('cfg-master-key').value.trim();
+  if (!key) { alert('APIキーを入力してください'); return; }
+  const st = document.getElementById('settings-status');
+  st.textContent = '接続中…';
+  st.style.color = '#4338CA';
+
+  const cfg = getJBConfig();
+  cfg.masterKey = key;
+
+  // Bin IDがなければ新規作成
+  if (!cfg.binId) {
+    try {
+      const res = await fetch('https://api.jsonbin.io/v3/b', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'X-Master-Key':key, 'X-Bin-Name':'juku-tasks' },
+        body: JSON.stringify({ tasks, memberColors: MEMBER_COLOR })
+      });
+      if (!res.ok) throw new Error('作成失敗');
+      const data = await res.json();
+      cfg.binId = data.metadata.id;
+      document.getElementById('cfg-bin-id').value = cfg.binId;
+    } catch(e) {
+      st.textContent = '❌ 接続失敗。APIキーを確認してください。';
+      st.style.color = '#B91C1C';
+      return;
+    }
+  }
+
+  setJBConfig(cfg);
+  st.textContent = '✅ 接続成功！';
+  st.style.color = '#065F46';
+
+  // 接続後すぐに最新を取得
+  await pullFromJB();
+}
+function disconnectSync() {
+  if (!confirm('同期設定を解除しますか？\nローカルのデータは残ります。')) return;
+  const cfg = getJBConfig();
+  delete cfg.masterKey;
+  delete cfg.binId;
+  setJBConfig(cfg);
+  document.getElementById('cfg-master-key').value = '';
+  document.getElementById('cfg-bin-id').value = '';
+  document.getElementById('settings-status').textContent = '同期を解除しました';
+  document.getElementById('settings-status').style.color = '#64748B';
+}
+
+// ---- 同期インジケーター ----
+let syncTimer = null;
+function showSyncBar(state, msg) {
+  const bar = document.getElementById('sync-bar');
+  bar.className = 'sync-bar ' + state;
+  bar.id = 'sync-bar';
+  bar.className = state; // use id styling
+  bar.textContent = msg;
+  if (syncTimer) clearTimeout(syncTimer);
+  if (state === 'synced') {
+    syncTimer = setTimeout(() => { bar.style.display = 'none'; }, 2000);
   }
 }
+
+// ---- JSONBin 同期 ----
+async function pullFromJB() {
+  const cfg = getJBConfig();
+  if (!cfg.masterKey || !cfg.binId) return;
+  showSyncBar('syncing', '☁️ 最新データを取得中…');
+  try {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${cfg.binId}/latest`, {
+      headers: { 'X-Master-Key': cfg.masterKey }
+    });
+    if (!res.ok) throw new Error('取得失敗');
+    const data = await res.json();
+    const remote = data.record;
+    if (remote && applyParsed(remote)) {
+      migrateData();
+      // ローカルにも保存
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, memberColors: MEMBER_COLOR })); } catch(e) {}
+      if (currentMember) renderMember(); else renderHome();
+      showSyncBar('synced', '✅ 同期完了');
+    }
+  } catch(e) {
+    showSyncBar('error', '⚠️ 同期失敗（オフライン？）');
+  }
+}
+
+async function pushToJB() {
+  const cfg = getJBConfig();
+  if (!cfg.masterKey || !cfg.binId) return;
+  try {
+    await fetch(`https://api.jsonbin.io/v3/b/${cfg.binId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type':'application/json', 'X-Master-Key': cfg.masterKey },
+      body: JSON.stringify({ tasks, memberColors: MEMBER_COLOR })
+    });
+  } catch(e) {
+    console.warn('JSONBin push failed:', e);
+  }
+}
+
+// ---- データ ----
+function getRandomColor() {
+  const used = Object.values(MEMBER_COLOR).map(c => c.accent);
+  const unused = RANDOM_COLORS.filter(c => !used.includes(c));
+  const pool = unused.length > 0 ? unused : RANDOM_COLORS;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function getMemberColor(m) {
+  if (!MEMBER_COLOR[m]) MEMBER_COLOR[m] = { accent: getRandomColor() };
+  return MEMBER_COLOR[m];
+}
+
+function repairTasks(raw) {
+  const repaired = {};
+  for (const [member, val] of Object.entries(raw)) {
+    if (!Array.isArray(val)) { repaired[member] = []; continue; }
+    repaired[member] = val.map(t => {
+      if (!t || typeof t !== 'object') return null;
+      return {
+        id:       typeof t.id === 'number' ? t.id : nextId++,
+        text:     typeof t.text === 'string' ? t.text : '',
+        status:   STATUS_LIST.includes(t.status) ? t.status : '進行中',
+        issue:    typeof t.issue === 'string' ? t.issue : '',
+        deadline: typeof t.deadline === 'string' ? t.deadline : '',
+        ...(t.archived !== undefined ? { archived: !!t.archived } : {}),
+      };
+    }).filter(Boolean);
+  }
+  return repaired;
+}
+
+function applyParsed(parsed) {
+  if (!parsed || typeof parsed !== 'object') return false;
+  if (parsed.tasks && typeof parsed.tasks === 'object') {
+    tasks = repairTasks(parsed.tasks);
+    if (parsed.memberColors && typeof parsed.memberColors === 'object') {
+      Object.assign(MEMBER_COLOR, parsed.memberColors);
+    }
+    Object.values(tasks).forEach(list => list.forEach(t => { if (t.id >= nextId) nextId = t.id + 1; }));
+    return true;
+  }
+  const vals = Object.values(parsed);
+  if (vals.length > 0 && Array.isArray(vals[0])) {
+    tasks = repairTasks(parsed);
+    Object.values(tasks).forEach(list => list.forEach(t => { if (t.id >= nextId) nextId = t.id + 1; }));
+    return true;
+  }
+  return false;
+}
+
+function loadData() {
+  const KEYS = [STORAGE_KEY, 'juku-tasks-v2', 'juku-tasks-v1'];
+  for (const key of KEYS) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (applyParsed(parsed)) { saveData(); return; }
+    } catch(e) {}
+  }
+  tasks = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  Object.values(tasks).forEach(list => list.forEach(t => { if (t.id >= nextId) nextId = t.id + 1; }));
+}
+
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks, memberColors: MEMBER_COLOR })); }
+  catch(e) { console.error('保存エラー:', e); }
+  pushToJB(); // クラウドにも非同期で保存
+}
+
+// ---- ユーティリティ ----
+function parseLocalDate(str) {
+  const [y,m,d] = str.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function deadlineState(dl) {
+  if (!dl) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const d = parseLocalDate(dl);
+  const diff = Math.round((d - today) / 86400000);
+  if (diff < 0)   return { label: Math.abs(diff)+'日超過', color:'#EF4444', bg:'#FEF2F2', border:'#FECACA', urgent:true };
+  if (diff === 0) return { label: '今日締切',              color:'#EF4444', bg:'#FEF2F2', border:'#FECACA', urgent:true };
+  if (diff <= 3)  return { label: 'あと'+diff+'日',        color:'#F59E0B', bg:'#FFFBEB', border:'#FDE68A', urgent:false };
+  return              { label: 'あと'+diff+'日',            color:'#64748B', bg:'#F8FAFC', border:'#E2E8F0', urgent:false };
+}
+function formatDeadline(dl) {
+  if (!dl) return '';
+  const d = parseLocalDate(dl);
+  return (d.getMonth()+1) + '/' + d.getDate();
+}
+function e(tag, attrs, ...children) {
+  const el = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs||{})) {
+    if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
+    else el.setAttribute(k, v);
+  }
+  for (const c of children) {
+    if (c == null) continue;
+    el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  }
+  return el;
+}
+
+// ---- ホーム ----
+function renderHome() {
+  const members = Object.keys(tasks);
+  const allActive = members.flatMap(m => tasks[m].filter(t => t.status !== '完了').map(t => ({...t, member:m})));
+
+  document.getElementById('home-active-count').textContent = allActive.length + '件';
+
+  const list = document.getElementById('home-active-list');
+  list.innerHTML = '';
+  if (allActive.length === 0) {
+    list.appendChild(e('div',{style:{textAlign:'center',padding:'10px 0',color:'#CBD5E1',fontSize:'11px'}},'なし'));
+  }
+  allActive.forEach(task => {
+    const sc = STATUS[task.status] || STATUS['進行中'];
+    const col = MEMBER_COLOR[task.member] || { accent:'#64748B' };
+    const hasIssue = !!(task.issue && task.issue.trim());
+    const ds = deadlineState(task.deadline);
+
+    const row = e('div', { style:{
+      borderRadius:'6px', border:'1px solid '+(ds?.urgent?'#FCA5A5':hasIssue?'#FCA5A5':'#E2E8F0'),
+      background: ds?.urgent?'#FFF7F7':hasIssue?'#FFF7F7':'#FAFAFA',
+      padding:'5px 8px', display:'flex', alignItems:'center', gap:'5px'
+    }});
+    row.appendChild(e('span',{style:{flexShrink:0,fontSize:'9px',fontWeight:700,color:col.accent,background:col.accent+'18',padding:'1px 6px',borderRadius:'20px',whiteSpace:'nowrap'}}, task.member));
+    row.appendChild(e('span',{style:{flex:1,fontSize:'11px',color:'#1E293B',lineHeight:1.3}}, task.text));
+    if (ds) row.appendChild(e('span',{style:{flexShrink:0,fontSize:'9px',fontWeight:700,color:ds.color,background:ds.bg,border:'1px solid '+ds.border,padding:'1px 5px',borderRadius:'20px',whiteSpace:'nowrap'}},'📅'+ds.label));
+    if (hasIssue) row.appendChild(e('span',{style:{fontSize:'10px',flexShrink:0}},'⚠️'));
+
+    const btn = e('button',{style:{flexShrink:0,display:'inline-flex',alignItems:'center',gap:'2px',padding:'2px 7px',borderRadius:'20px',background:sc.bg,border:'1px solid '+sc.border,color:sc.text,fontSize:'9px',fontWeight:700,whiteSpace:'nowrap',fontFamily:'inherit'}});
+    btn.onclick = ev => { ev.stopPropagation(); requestCycle(task.member, task.id); };
+    btn.appendChild(e('span',{style:{width:'4px',height:'4px',borderRadius:'50%',background:sc.dot,flexShrink:0}}));
+    btn.appendChild(document.createTextNode(task.status));
+    row.appendChild(btn);
+    list.appendChild(row);
+  });
+
+  const legend = document.getElementById('home-legend');
+  legend.innerHTML = '';
+  STATUS_LIST.forEach(s => {
+    const sc = STATUS[s];
+    const count = allActive.filter(t=>t.status===s).length;
+    if (!count) return;
+    const sp = e('span',{style:{display:'inline-flex',alignItems:'center',gap:'3px',padding:'2px 8px',borderRadius:'20px',background:sc.bg,border:'1px solid '+sc.border,color:sc.text,fontSize:'10px',fontWeight:700}});
+    sp.appendChild(e('span',{style:{width:'5px',height:'5px',borderRadius:'50%',background:sc.dot}}));
+    sp.appendChild(document.createTextNode(s+' '+count));
+    legend.appendChild(sp);
+  });
+
+  const ml = document.getElementById('member-list');
+  ml.innerHTML = '';
+  members.forEach(m => {
+    const col = getMemberColor(m);
+    const mlist = tasks[m];
+    const st = {
+      active:   mlist.filter(t=>t.status==='進行中').length,
+      planned:  mlist.filter(t=>t.status==='予定').length,
+      checking: mlist.filter(t=>t.status==='確認中').length,
+      done:     mlist.filter(t=>t.status==='完了'&&!t.archived).length,
+      archived: mlist.filter(t=>t.archived).length,
+      issues:   mlist.filter(t=>t.issue&&t.issue.trim()).length,
+      overdue:  mlist.filter(t=>{ if(!t.deadline||t.status==='完了') return false; const today=new Date();today.setHours(0,0,0,0); return parseLocalDate(t.deadline)<=today; }).length,
+    };
+    const card = e('div',{class:'member-card',style:{background:'#fff',borderRadius:'10px',border:'1px solid #E2E8F0',borderLeft:'3px solid '+col.accent,padding:'8px 12px',display:'flex',alignItems:'center',gap:'10px'}});
+    card.onclick = () => goMember(m);
+    card.appendChild(e('div',{style:{width:'26px',height:'26px',borderRadius:'50%',background:col.accent,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:'11px',flexShrink:0}}, m[0]));
+    const info = e('div',{style:{flex:1}});
+    info.appendChild(e('div',{style:{fontWeight:700,fontSize:'12px',color:'#0F172A'}}, m));
+    const pills = e('div',{style:{display:'flex',gap:'3px',marginTop:'3px',flexWrap:'wrap'}});
+    const addPill = (c,bg,border,txt) => { pills.appendChild(e('span',{style:{display:'inline-flex',alignItems:'center',padding:'1px 7px',borderRadius:'20px',background:bg,border:'1px solid '+border,color:c,fontSize:'10px',fontWeight:600}},txt)); };
+    if (st.active)   addPill('#4338CA','#EEF2FF','#C7D2FE', st.active+' 進行中');
+    if (st.checking) addPill('#0369A1','#F0F9FF','#BAE6FD', st.checking+' 確認中');
+    if (st.planned)  addPill('#B45309','#FEF3C7','#FDE68A', st.planned+' 予定');
+    if (st.done)     addPill('#065F46','#D1FAE5','#A7F3D0', st.done+' 完了');
+    if (st.archived) addPill('#64748B','#F1F5F9','#E2E8F0', st.archived+' 消化済');
+    if (st.overdue)  addPill('#B91C1C','#FEE2E2','#FECACA', '⏰'+st.overdue+' 期限超過');
+    if (st.issues)   addPill('#B91C1C','#FEE2E2','#FECACA', '⚠ '+st.issues);
+    info.appendChild(pills);
+    card.appendChild(info);
+    card.appendChild(e('span',{style:{color:'#CBD5E1',fontSize:'16px'}},'›'));
+    ml.appendChild(card);
+  });
+}
+
+// ---- メンバーページ ----
+function goMember(m) {
+  currentMember = m;
+  openIssueId = null; openDeadlineId = null; showArchived = false;
+  document.getElementById('add-form').style.display = 'none';
+  document.getElementById('new-task-text').value = '';
+  document.getElementById('new-task-status').value = '進行中';
+  document.getElementById('new-task-deadline').value = '';
+  const col = getMemberColor(m);
+  document.getElementById('m-avatar').textContent = m[0];
+  document.getElementById('m-avatar').style.background = col.accent;
+  document.getElementById('m-name').textContent = m;
+  document.getElementById('add-btn').style.background = col.accent;
+  document.getElementById('add-confirm-btn').style.background = col.accent;
+  document.getElementById('page-home').classList.remove('active');
+  document.getElementById('page-member').classList.add('active');
+  renderMember();
+}
+
+function goHome() {
+  document.getElementById('page-member').classList.remove('active');
+  document.getElementById('page-home').classList.add('active');
+  renderHome();
+}
+
+function toggleAddForm() {
+  const f = document.getElementById('add-form');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  if (f.style.display === 'block') document.getElementById('new-task-text').focus();
+}
+
+function addTask() {
+  const text = document.getElementById('new-task-text').value.trim();
+  if (!text) return;
+  const status = document.getElementById('new-task-status').value;
+  const deadline = document.getElementById('new-task-deadline').value;
+  const task = { id: nextId++, text, status, issue:'', deadline };
+  if (status === '完了') task.archived = false;
+  tasks[currentMember].push(task);
+  saveData();
+  document.getElementById('new-task-text').value = '';
+  document.getElementById('new-task-status').value = '進行中';
+  document.getElementById('new-task-deadline').value = '';
+  document.getElementById('add-form').style.display = 'none';
+  renderMember();
+}
+
+function renderMember() {
+  const m = currentMember;
+  const col = getMemberColor(m);
+  const mlist = tasks[m] || [];
+  const visible  = mlist.filter(t => !t.archived);
+  const archived = mlist.filter(t => t.archived);
+
+  const bar = document.getElementById('m-status-bar');
+  bar.innerHTML = '';
+  STATUS_LIST.forEach(s => {
+    const sc = STATUS[s];
+    const count = visible.filter(t=>t.status===s).length;
+    const sp = e('span',{style:{display:'inline-flex',alignItems:'center',gap:'3px',padding:'3px 9px',borderRadius:'20px',background:sc.bg,border:'1px solid '+sc.border,color:sc.text,fontSize:'10px',fontWeight:700}});
+    sp.appendChild(e('span',{style:{width:'5px',height:'5px',borderRadius:'50%',background:sc.dot}}));
+    sp.appendChild(document.createTextNode(s+' '+count));
+    bar.appendChild(sp);
+  });
+
+  const tl = document.getElementById('task-list');
+  tl.innerHTML = '';
+
+  if (visible.length === 0 && archived.length === 0) {
+    tl.appendChild(e('div',{style:{textAlign:'center',padding:'32px 0',color:'#CBD5E1',fontSize:'14px'}},'タスクなし'));
+    return;
+  }
+
+  visible.forEach(task => renderTaskCard(tl, task, m, col));
+
+  if (archived.length > 0) {
+    const sec = e('div',{style:{marginTop:'4px'}});
+    const togBtn = e('button',{style:{display:'flex',alignItems:'center',gap:'6px',color:'#94A3B8',fontSize:'12px',padding:'8px 0',borderTop:'1px dashed #E2E8F0',width:'100%',fontFamily:'inherit'}});
+    const arrow = e('span',{style:{fontSize:'9px'}}, showArchived?'▼':'▶');
+    togBtn.appendChild(arrow);
+    togBtn.appendChild(document.createTextNode('消化済み ('+archived.length+'件)'));
+    togBtn.onclick = () => { showArchived = !showArchived; renderMember(); };
+    sec.appendChild(togBtn);
+    if (showArchived) {
+      archived.forEach(task => {
+        const row = e('div',{style:{borderRadius:'10px',border:'1px solid #F1F5F9',background:'#F8FAFC',padding:'9px 12px',opacity:0.5,marginBottom:'7px',display:'flex',alignItems:'center',gap:'8px'}});
+        row.appendChild(e('span',{style:{flexShrink:0,padding:'3px 10px',borderRadius:'20px',background:'#F1F5F9',border:'1px solid #E2E8F0',color:'#94A3B8',fontSize:'10px',fontWeight:600}},'✓ 消化済み'));
+        row.appendChild(e('span',{style:{flex:1,fontSize:'13px',color:'#94A3B8',textDecoration:'line-through',lineHeight:1.5}}, task.text));
+        const rb = e('button',{style:{color:'#10B981',fontSize:'15px',fontFamily:'inherit'}},'↩');
+        rb.onclick = () => toggleArchive(m, task.id);
+        row.appendChild(rb);
+        sec.appendChild(row);
+      });
+    }
+    tl.appendChild(sec);
+  }
+}
+
+function renderTaskCard(container, task, m, col) {
+  const sc = STATUS[task.status] || STATUS['進行中'];
+  const hasIssue = !!(task.issue && task.issue.trim());
+  const isIssueOpen = openIssueId === task.id;
+  const isDeadlineOpen = openDeadlineId === task.id;
+  const ds = deadlineState(task.deadline);
+
+  const cardBorder = ds?.urgent ? '#FCA5A5' : hasIssue ? '#FCA5A5' : sc.border;
+  const cardBg     = ds?.urgent ? '#FFF7F7' : hasIssue ? '#FFF7F7' : sc.bg;
+
+  const card = e('div',{style:{borderRadius:'12px',border:'1.5px solid '+cardBorder,background:cardBg,overflow:'hidden'}});
+  card.onclick = () => { openIssueId = isIssueOpen ? null : task.id; openDeadlineId = null; renderMember(); };
+
+  const row = e('div',{style:{display:'flex',alignItems:'center',gap:'8px',padding:'11px 12px'}});
+
+  const sb = e('button',{style:{flexShrink:0,padding:'4px 10px',borderRadius:'20px',background:sc.bg,border:'1.5px solid '+sc.border,color:sc.text,fontSize:'11px',fontWeight:700,whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:'4px',fontFamily:'inherit'}});
+  sb.onclick = ev => { ev.stopPropagation(); requestCycle(m, task.id); };
+  sb.appendChild(e('span',{style:{width:'6px',height:'6px',borderRadius:'50%',background:sc.dot}}));
+  sb.appendChild(document.createTextNode(task.status));
+  row.appendChild(sb);
+  row.appendChild(e('span',{style:{flex:1,fontSize:'14px',lineHeight:1.5,color:'#1E293B'}}, task.text));
+
+  const icons = e('div',{style:{display:'flex',alignItems:'center',gap:'4px',flexShrink:0}});
+  const dlBtn = e('button',{style:{padding:'2px 7px',borderRadius:'20px',background:ds?ds.bg:'#F8FAFC',border:'1px solid '+(ds?ds.border:'#E2E8F0'),color:ds?ds.color:'#94A3B8',fontSize:'10px',fontWeight:700,whiteSpace:'nowrap',fontFamily:'inherit'}});
+  dlBtn.textContent = task.deadline ? '📅'+formatDeadline(task.deadline) : '📅';
+  dlBtn.onclick = ev => { ev.stopPropagation(); openDeadlineId = isDeadlineOpen ? null : task.id; openIssueId = null; renderMember(); };
+  icons.appendChild(dlBtn);
+  if (hasIssue) icons.appendChild(e('span',{style:{fontSize:'13px'}},'⚠️'));
+  if (task.status === '完了') {
+    const ab = e('button',{style:{color:'#94A3B8',fontSize:'14px',fontFamily:'inherit'}},'📦');
+    ab.onclick = ev => { ev.stopPropagation(); toggleArchive(m, task.id); };
+    icons.appendChild(ab);
+  }
+  const del = e('button',{style:{color:'#FECACA',fontSize:'14px',fontFamily:'inherit'}},'✕');
+  del.onclick = ev => { ev.stopPropagation(); deleteTask(m, task.id); };
+  icons.appendChild(del);
+  row.appendChild(icons);
+  card.appendChild(row);
+
+  if (isDeadlineOpen) {
+    const dp = e('div',{style:{margin:'0 12px 12px',padding:'10px 12px',borderRadius:'8px',background:'#F8FAFC',border:'1px solid #E2E8F0'}});
+    dp.onclick = ev => ev.stopPropagation();
+    dp.appendChild(e('div',{style:{fontSize:'11px',fontWeight:700,color:'#475569',marginBottom:'6px'}},'📅 期限設定'));
+    const drow = e('div',{style:{display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}});
+    const di = e('input',{type:'date',style:{border:'1.5px solid #CBD5E1',borderRadius:'8px',padding:'6px 10px',fontSize:'13px',color:'#334155',background:'#fff',fontFamily:'inherit'}});
+    di.value = task.deadline || '';
+    di.onchange = ev => { task.deadline = ev.target.value; saveData(); renderMember(); };
+    drow.appendChild(di);
+    if (task.deadline) {
+      const clr = e('button',{style:{background:'#FEE2E2',color:'#EF4444',borderRadius:'6px',padding:'5px 10px',fontSize:'12px',fontWeight:600,fontFamily:'inherit'}},'削除');
+      clr.onclick = () => { task.deadline = ''; saveData(); renderMember(); };
+      drow.appendChild(clr);
+    }
+    if (ds) drow.appendChild(e('span',{style:{fontSize:'11px',fontWeight:700,color:ds.color}}, ds.label));
+    const cls = e('button',{style:{color:'#94A3B8',fontSize:'12px',fontFamily:'inherit'}},'閉じる');
+    cls.onclick = () => { openDeadlineId = null; renderMember(); };
+    drow.appendChild(cls);
+    dp.appendChild(drow);
+    card.appendChild(dp);
+  }
+
+  if (ds?.urgent && !isDeadlineOpen) {
+    const banner = e('div',{style:{margin:'0 12px 6px',padding:'4px 10px',borderRadius:'6px',background:'#FEF2F2',border:'1px solid #FECACA',display:'flex',alignItems:'center',gap:'4px'}});
+    banner.appendChild(e('span',{style:{fontSize:'11px',fontWeight:700,color:'#EF4444'}},'⏰ '+ds.label));
+    card.appendChild(banner);
+  }
+
+  if (hasIssue && !isIssueOpen && !isDeadlineOpen) {
+    const ip = e('div',{style:{margin:'0 12px 12px',padding:'8px 10px',borderRadius:'8px',background:'#FFF0F0',border:'1px solid #FECACA',borderLeft:'3px solid #EF4444'}});
+    ip.appendChild(e('div',{style:{fontSize:'10px',fontWeight:700,color:'#B91C1C',marginBottom:'2px'}},'⚠ 課題'));
+    const txt = e('div',{style:{fontSize:'12px',color:'#475569',lineHeight:1.7,whiteSpace:'pre-wrap'}});
+    txt.textContent = task.issue;
+    ip.appendChild(txt);
+    card.appendChild(ip);
+  }
+
+  if (isIssueOpen) {
+    const ie = e('div',{style:{margin:'0 12px 12px',padding:'12px',borderRadius:'8px',background:'#FFF7F7',border:'1px solid #FECACA',borderLeft:'3px solid #EF4444'}});
+    ie.onclick = ev => ev.stopPropagation();
+    ie.appendChild(e('div',{style:{fontSize:'11px',fontWeight:700,color:'#B91C1C',marginBottom:'8px'}},'⚠ 課題メモ'));
+    const ta = e('textarea',{rows:4});
+    ta.placeholder = '課題・未消化の内容を入力…';
+    ta.value = task.issue || '';
+    ie.appendChild(ta);
+    const btns = e('div',{style:{display:'flex',gap:'8px',marginTop:'8px'}});
+    const sv = e('button',{style:{background:col.accent,color:'#fff',borderRadius:'8px',padding:'7px 18px',fontSize:'13px',fontWeight:600,fontFamily:'inherit'}},'保存');
+    sv.onclick = () => { task.issue = ta.value; saveData(); openIssueId = null; renderMember(); };
+    const cn = e('button',{style:{color:'#94A3B8',fontSize:'13px',fontFamily:'inherit'}},'キャンセル');
+    cn.onclick = () => { openIssueId = null; renderMember(); };
+    btns.appendChild(sv); btns.appendChild(cn);
+    ie.appendChild(btns);
+    card.appendChild(ie);
+    setTimeout(()=>ta.focus(), 50);
+  }
+
+  container.appendChild(card);
+}
+
+// ---- ステータス変更 ----
+function requestCycle(m, id) {
+  const task = tasks[m].find(t => t.id === id);
+  if (!task) return;
+  document.getElementById('sheet-task-text').textContent = task.text;
+  const btns = document.getElementById('sheet-status-btns');
+  btns.innerHTML = '';
+  STATUS_LIST.forEach(s => {
+    const sc = STATUS[s];
+    const isCurrent = task.status === s;
+    const btn = document.createElement('button');
+    btn.style.cssText = `display:flex;align-items:center;gap:8px;padding:11px 14px;border-radius:12px;background:${isCurrent?sc.bg:'#F8FAFC'};border:${isCurrent?'2px solid '+sc.border:'1.5px solid #E2E8F0'};font-family:inherit;cursor:${isCurrent?'default':'pointer'};opacity:${isCurrent?1:0.85};width:100%;`;
+    const dot = document.createElement('span');
+    dot.style.cssText = `width:8px;height:8px;border-radius:50%;background:${sc.dot};flex-shrink:0;`;
+    const lbl = document.createElement('span');
+    lbl.style.cssText = `font-size:13px;font-weight:${isCurrent?700:600};color:${isCurrent?sc.text:'#374151'};flex:1;text-align:left;`;
+    lbl.textContent = s + (isCurrent ? ' ← 現在' : '');
+    btn.appendChild(dot); btn.appendChild(lbl);
+    if (!isCurrent) {
+      btn.onclick = () => {
+        task.status = s;
+        if (s === '完了') task.archived = false;
+        else delete task.archived;
+        saveData();
+        closeSheet();
+        if (currentMember) renderMember(); else renderHome();
+      };
+    }
+    btns.appendChild(btn);
+  });
+  document.getElementById('status-sheet').style.display = 'flex';
+}
+
+function closeSheet() {
+  document.getElementById('status-sheet').style.display = 'none';
+}
+
+// ---- ホーム追加モーダル ----
+function openHomeAdd() {
+  const sel = document.getElementById('home-add-member');
+  sel.innerHTML = '';
+  Object.keys(tasks).forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    sel.appendChild(opt);
+  });
+  document.getElementById('home-add-text').value = '';
+  document.getElementById('home-add-status').value = '進行中';
+  document.getElementById('home-add-deadline').value = '';
+  document.getElementById('home-add-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('home-add-text').focus(), 100);
+}
+
+function closeHomeAdd() {
+  document.getElementById('home-add-modal').style.display = 'none';
+}
+
+function submitHomeAdd() {
+  const text = document.getElementById('home-add-text').value.trim();
+  if (!text) return;
+  const m = document.getElementById('home-add-member').value;
+  if (!m) return;
+  const status = document.getElementById('home-add-status').value;
+  const deadline = document.getElementById('home-add-deadline').value || '';
+  const task = { id: nextId++, text, status, issue:'', deadline };
+  if (status === '完了') task.archived = false;
+  if (!tasks[m]) tasks[m] = [];
+  if (!MEMBER_COLOR[m]) MEMBER_COLOR[m] = { accent: getRandomColor() };
+  tasks[m].push(task);
+  saveData();
+  closeHomeAdd();
+  renderHome();
+}
+
+function toggleNewMemberForm() {
+  const form = document.getElementById('new-member-form');
+  const icon = document.getElementById('new-member-toggle-icon');
+  const isOpen = form.style.display !== 'none';
+  form.style.display = isOpen ? 'none' : 'block';
+  icon.textContent = isOpen ? '＋' : '－';
+  if (!isOpen) setTimeout(() => document.getElementById('new-member-name').focus(), 50);
+}
+
+function addNewMember() {
+  const name = document.getElementById('new-member-name').value.trim();
+  if (!name) return;
+  if (tasks[name]) { alert('「'+name+'」はすでに存在します'); return; }
+  MEMBER_COLOR[name] = { accent: getRandomColor() };
+  tasks[name] = [];
+  saveData();
+  const sel = document.getElementById('home-add-member');
+  sel.innerHTML = '';
+  Object.keys(tasks).forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    sel.appendChild(opt);
+  });
+  sel.value = name;
+  document.getElementById('new-member-name').value = '';
+  document.getElementById('new-member-form').style.display = 'none';
+  document.getElementById('new-member-toggle-icon').textContent = '＋';
+}
+
+// ---- その他操作 ----
+function toggleArchive(m, id) {
+  const task = tasks[m].find(t => t.id === id);
+  if (task && task.status === '完了') { task.archived = !task.archived; saveData(); renderMember(); }
+}
+
+function deleteTask(m, id) {
+  tasks[m] = tasks[m].filter(t => t.id !== id);
+  if (openIssueId === id) openIssueId = null;
+  saveData();
+  renderMember();
+}
+
+function confirmReset() {
+  if (!confirm('データを全てリセットして初期状態に戻りますか？\n（この操作は取り消せません）')) return;
+  try {
+    ['juku-tasks-v3','juku-tasks-v2','juku-tasks-v1'].forEach(k => localStorage.removeItem(k));
+    if (window.indexedDB) { try { indexedDB.deleteDatabase('juku-db'); } catch(e) {} }
+  } catch(e) {}
+  location.reload();
+}
+
+function migrateData() {
+  let changed = false;
+  const oldKeys = ['法花＆勝部', '法花&勝部'];
+  oldKeys.forEach(key => {
+    if (tasks[key]) {
+      if (!tasks['勝部']) tasks['勝部'] = [];
+      tasks['勝部'] = tasks['勝部'].concat(tasks[key]);
+      delete tasks[key];
+      changed = true;
+    }
+  });
+  const required = ['法花','勝部','彦坂','後藤','大川','若狭','桜井','池田','篠原'];
+  required.forEach(m => { if (!tasks[m]) { tasks[m] = []; changed = true; } });
+  Object.keys(tasks).forEach(m => {
+    if (!MEMBER_COLOR[m]) { MEMBER_COLOR[m] = { accent: getRandomColor() }; changed = true; }
+  });
+  if (changed) saveData();
+}
+
+// ---- 起動 ----
+(function cleanupOldDB() {
+  if (!window.indexedDB) return;
+  try { indexedDB.deleteDatabase('juku-db'); } catch(e) {}
+})();
+
+(function detectLine() {
+  const ua = navigator.userAgent || '';
+  if (ua.indexOf('Line/') !== -1 || ua.indexOf('FBAN') !== -1) {
+    document.getElementById('line-warning').style.display = 'block';
+  }
+})();
+
+async function init() {
+  try {
+    loadData();
+    migrateData();
+    renderHome();
+    // クラウドから最新データを取得（設定済みの場合）
+    await pullFromJB();
+  } catch(e) {
+    console.error(e);
+    document.body.innerHTML = `
+      <div style="padding:40px 24px;text-align:center;font-family:sans-serif;">
+        <div style="font-size:40px;margin-bottom:16px;">⚠️</div>
+        <div style="font-size:16px;font-weight:700;color:#0F172A;margin-bottom:8px;">データ読み込みエラー</div>
+        <div style="font-size:13px;color:#64748B;margin-bottom:32px;">保存データに問題があります。<br>リセットして初期データで起動できます。</div>
+        <button onclick="resetAndReload()" style="padding:14px 32px;background:#EF4444;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;font-family:sans-serif;cursor:pointer;">データをリセットして再起動</button>
+      </div>`;
+  }
+}
+
+function resetAndReload() {
+  try {
+    ['juku-tasks-v3','juku-tasks-v2','juku-tasks-v1'].forEach(k => localStorage.removeItem(k));
+    if (window.indexedDB) { try { indexedDB.deleteDatabase('juku-db'); } catch(e) {} }
+  } catch(e) {}
+  location.reload();
+}
+
+init();
 </script>
 </body>
 </html>
