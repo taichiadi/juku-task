@@ -5,108 +5,158 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>塾の改善改革</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; background: #F1F5F9; min-height: 100vh; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif; background: #F1F5F9; min-height: 100vh; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; }
 .page { display: none; padding: 10px 8px 28px; }
 .page.active { display: block; }
-.member-card { cursor: pointer; transition: transform 0.12s; }
-.member-card:active { transform: scale(0.98); }
-.status-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1.5px solid; }
-.dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
 #sync-indicator { position: fixed; top: 8px; right: 8px; z-index: 99998; display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; border: 1px solid; }
 #sync-indicator.synced { background: #ECFDF5; color: #065F46; border-color: #A7F3D0; }
-#sync-indicator.syncing { background: #EEF2FF; color: #4338CA; border-color: #C7D2FE; }
 #sync-indicator.offline { background: #F8FAFC; color: #64748B; border-color: #E2E8F0; }
 #config-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:99999; align-items:center; justify-content:center; padding:20px; }
 #config-modal.open { display:flex; }
 .config-box { background:#fff; border-radius:16px; padding:24px 20px; width:100%; max-width:400px; }
-textarea, input, select { width: 100%; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; }
+input, select { width: 100%; border: 1.5px solid #CBD5E1; border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; margin-bottom: 8px; }
+.task-item { background:#fff; padding:12px; border-radius:10px; border:1px solid #E2E8F0; display:flex; align-items:center; gap:8px; }
+.status-select { width:auto; margin:0; font-size:12px; padding:4px 6px; }
 </style>
 </head>
 <body>
-<div id="sync-indicator" class="offline"><span class="dot" style="background:#94A3B8"></span><span id="sync-text">未設定 ⚙️</span></div>
-<div id="config-modal"><div class="config-box"><div style="font-weight:700;margin-bottom:10px;">🔥 Firebase 設定</div><input type="text" id="cfg-apikey" placeholder="API Key" style="margin-bottom:8px;"><input type="text" id="cfg-dburl" placeholder="Database URL" style="margin-bottom:8px;"><input type="text" id="cfg-projectid" placeholder="Project ID" style="margin-bottom:8px;"><input type="text" id="cfg-appid" placeholder="App ID" style="margin-bottom:12px;"><button onclick="saveConfig()" style="width:100%;padding:12px;background:#1E293B;color:#fff;border-radius:12px;font-weight:700;">保存して接続</button></div></div>
-<div id="page-home" class="page active">
-  <div style="display:flex;align-items:center;margin-bottom:10px;font-weight:700;">📋 塾の改善改革<button onclick="openHomeAdd()" style="margin-left:auto;background:#1E293B;color:#fff;padding:5px 12px;border-radius:20px;font-size:11px;">＋ タスク追加</button><button onclick="openConfigModal()" style="margin-left:5px;background:#EEF2FF;color:#4338CA;padding:5px 10px;border-radius:20px;font-size:11px;">⚙️</button></div>
-  <div id="home-active-list" style="background:#fff;border-radius:12px;border:1px solid #E2E8F0;padding:8px;display:flex;flex-direction:column;gap:5px;"></div>
-  <div id="member-list" style="margin-top:15px;display:flex;flex-direction:column;gap:8px;"></div>
+
+<div id="sync-indicator" class="offline">● 未設定 ⚙️</div>
+
+<div id="config-modal">
+  <div class="config-box">
+    <div style="font-weight:700;margin-bottom:12px;">🔥 Firebase 設定</div>
+    <input type="text" id="cfg-apikey" placeholder="API Key">
+    <input type="text" id="cfg-dburl" placeholder="Database URL (https://xxx.firebaseio.com)">
+    <input type="text" id="cfg-projectid" placeholder="Project ID">
+    <input type="text" id="cfg-appid" placeholder="App ID">
+    <button onclick="saveConfig()" style="width:100%;padding:12px;background:#1E293B;color:#fff;border-radius:12px;font-weight:700;">保存して接続</button>
+  </div>
 </div>
-<div id="page-member" class="page">
-  <button onclick="goHome()" style="background:#E2E8F0;padding:5px 15px;border-radius:20px;margin-bottom:10px;">← 戻る</button>
-  <h2 id="m-name" style="margin-bottom:15px;"></h2>
-  <div id="task-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+
+<div id="page-home" class="page active">
+  <div style="display:flex;align-items:center;margin-bottom:12px;padding-top:40px;">
+    <span style="font-weight:700;font-size:16px;">📋 塾の改善改革</span>
+    <button onclick="openAddModal()" style="margin-left:auto;background:#1E293B;color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;">＋ タスク追加</button>
+    <button onclick="openConfigModal()" style="margin-left:6px;background:#EEF2FF;color:#4338CA;padding:6px 10px;border-radius:20px;font-size:12px;">⚙️</button>
+  </div>
+  <div id="task-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+</div>
+
+<div id="add-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:16px;padding:24px 20px;width:100%;max-width:400px;">
+    <div style="font-weight:700;margin-bottom:12px;">＋ タスク追加</div>
+    <input type="text" id="add-member" placeholder="担当者名（例：田中）">
+    <input type="text" id="add-text" placeholder="タスク内容">
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button onclick="closeAddModal()" style="flex:1;padding:12px;background:#E2E8F0;border-radius:12px;font-weight:700;">キャンセル</button>
+      <button onclick="addTask()" style="flex:1;padding:12px;background:#1E293B;color:#fff;border-radius:12px;font-weight:700;">追加</button>
+    </div>
+  </div>
 </div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getDatabase, ref, set, onValue } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
-let db, tasks = {}, currentMember = null;
+let db = null;
+let tasks = [];
 const CONFIG_KEY = 'juku-firebase-config';
 
 window.openConfigModal = () => document.getElementById('config-modal').classList.add('open');
+window.openAddModal = () => document.getElementById('add-modal').style.display = 'flex';
+window.closeAddModal = () => document.getElementById('add-modal').style.display = 'none';
+
 window.saveConfig = () => {
-  const cfg = { apiKey: document.getElementById('cfg-apikey').value, databaseURL: document.getElementById('cfg-dburl').value, projectId: document.getElementById('cfg-projectid').value, appId: document.getElementById('cfg-appid').value };
+  const cfg = {
+    apiKey: document.getElementById('cfg-apikey').value,
+    databaseURL: document.getElementById('cfg-dburl').value,
+    projectId: document.getElementById('cfg-projectid').value,
+    appId: document.getElementById('cfg-appid').value
+  };
   localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
   location.reload();
 };
 
-const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-if (cfg.apiKey) {
-  const app = initializeApp(cfg);
-  db = getDatabase(app);
-  onValue(ref(db, 'juku-tasks'), (snap) => {
-    tasks = snap.val()?.tasks || {};
-    document.getElementById('sync-indicator').className = 'synced';
-    document.getElementById('sync-text').textContent = '同期済み ✓';
+window.addTask = () => {
+  const member = document.getElementById('add-member').value.trim();
+  const text = document.getElementById('add-text').value.trim();
+  if (!member || !text) { alert('担当者とタスク内容を入力してください'); return; }
+  tasks.push({ id: Date.now(), member, text, status: '未着手' });
+  saveToFirebase();
+  window.closeAddModal();
+  document.getElementById('add-member').value = '';
+  document.getElementById('add-text').value = '';
+};
+
+window.changeStatus = (id, status) => {
+  const task = tasks.find(t => t.id === id);
+  if (task) { task.status = status; saveToFirebase(); }
+};
+
+window.deleteTask = (id) => {
+  tasks = tasks.filter(t => t.id !== id);
+  saveToFirebase();
+};
+
+function saveToFirebase() {
+  if (db) {
+    set(ref(db, 'juku-tasks'), { tasks });
+  } else {
+    localStorage.setItem('juku-local-tasks', JSON.stringify(tasks));
     render();
-  });
+  }
 }
 
 function render() {
-  const homeList = document.getElementById('home-active-list');
-  homeList.innerHTML = '';
-  Object.keys(tasks).forEach(m => {
-    tasks[m].forEach(t => {
-      if (t.status !== '完了') {
-        const div = document.createElement('div');
-        div.style.padding = '5px'; div.style.borderBottom = '1px solid #eee';
-        div.textContent = `[<LaTex>${m}] $</LaTex>{t.text} (${t.status})`;
-        homeList.appendChild(div);
-      }
+  const list = document.getElementById('task-list');
+  list.innerHTML = '';
+  if (tasks.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:#94A3B8;padding:40px;">タスクがありません</div>';
+    return;
+  }
+  tasks.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'task-item';
+    const color = t.status === '完了' ? '#ECFDF5' : t.status === '進行中' ? '#EEF2FF' : '#fff';
+    div.style.background = color;
+    div.innerHTML = `
+      <div style="flex:1;">
+        <div style="font-size:11px;color:#64748B;">${t.member}</div>
+        <div style="font-size:14px;font-weight:600;${t.status==='完了'?'text-decoration:line-through;color:#94A3B8;':''}">${t.text}</div>
+      </div>
+      <select class="status-select" onchange="changeStatus(${t.id}, this.value)">
+        <option ${t.status==='未着手'?'selected':''}>未着手</option>
+        <option ${t.status==='進行中'?'selected':''}>進行中</option>
+        <option ${t.status==='完了'?'selected':''}>完了</option>
+      </select>
+      <button onclick="deleteTask(${t.id})" style="color:#EF4444;font-size:18px;padding:0 4px;">×</button>
+    `;
+    list.appendChild(div);
+  });
+}
+
+const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+if (cfg.apiKey && cfg.databaseURL) {
+  try {
+    const app = initializeApp(cfg);
+    db = getDatabase(app);
+    onValue(ref(db, 'juku-tasks'), (snap) => {
+      tasks = snap.val()?.tasks || [];
+      document.getElementById('sync-indicator').className = 'synced';
+      document.getElementById('sync-indicator').textContent = '● 同期済み ✓';
+      render();
     });
-  });
-
-  const mList = document.getElementById('member-list');
-  mList.innerHTML = '';
-  Object.keys(tasks).forEach(m => {
-    const btn = document.createElement('button');
-    btn.style.background = '#fff'; btn.style.padding = '15px'; btn.style.borderRadius = '12px'; btn.style.textAlign = 'left';
-    btn.textContent = m;
-    btn.onclick = () => openMember(m);
-    mList.appendChild(btn);
-  });
+  } catch(e) {
+    console.error(e);
+  }
+} else {
+  const local = localStorage.getItem('juku-local-tasks');
+  if (local) tasks = JSON.parse(local);
+  render();
 }
-
-function openMember(m) {
-  currentMember = m;
-  document.getElementById('page-home').classList.remove('active');
-  document.getElementById('page-member').classList.add('active');
-  document.getElementById('m-name').textContent = m;
-  const tList = document.getElementById('task-list');
-  tList.innerHTML = '';
-  (tasks[m] || []).forEach(t => {
-    const d = document.createElement('div');
-    d.style.background = '#fff'; d.style.padding = '10px'; d.style.borderRadius = '8px';
-    d.textContent = t.text + ' - ' + t.status;
-    tList.appendChild(d);
-  });
-}
-window.goHome = () => {
-  document.getElementById('page-member').classList.remove('active');
-  document.getElementById('page-home').classList.add('active');
-};
 </script>
 </body>
 </html>
